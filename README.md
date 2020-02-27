@@ -84,7 +84,7 @@ of <img src="https://render.githubusercontent.com/render/math?math=O(nm^2)">.
 We however do not observe this behavior, and instead see a runtime of
 <img src="https://render.githubusercontent.com/render/math?math=O(mf)">, which
 is the same as normal Ford-Fulkerson. We are unsure why, since our BFS
-path-finding algorithm utilizes <img src="https://render.githubusercontent.com/render/math?math=O(n+m)"> time and thus should be equivalent to Edmonds-Karp.
+path-finding algorithm utilizes <img src="https://render.githubusercontent.com/render/math?math=O(n %2B m)"> time and thus should be equivalent to Edmonds-Karp.
 
 <div style="text-align:center"><img src=bfs_complexity.png width=400/></div>
 
