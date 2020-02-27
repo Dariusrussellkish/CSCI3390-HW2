@@ -1,3 +1,5 @@
+import os
+import sys
 from collections import deque
 from copy import deepcopy
 from timeit import default_timer as timer
@@ -31,7 +33,7 @@ def generate_random_flow_network(n, c_min=1, c_max=1000, **kwargs):
     G = nx.generators.barabasi_albert_graph(n, **kwargs).to_directed()
     source = choice(G.nodes())
 
-    for frm, too in list(G.edges()):  # remove random edges with p=2/3
+    for frm, too in list(G.edges()):  # remove random edges with p=1/3
         if randint(0, 3) > 1:
             G.remove_edge(frm, too)
 
@@ -136,28 +138,31 @@ def bfs(G, source, **kwargs):
 
 
 def bfs_path(G, source, target, **kwargs):
-    visited = set()  # Line 1
-    queue = deque()  # Line 3
-    path_queue = deque()
-    queue.append(source)  # Line 4
-    path_queue.append([source])
+    visited = set()
+    queue = deque()
+    queue.append(source)
+    H = nx.DiGraph()
     while queue:
-        node = queue.popleft()  # Line 6
-        path = path_queue.popleft()
-        visited.add(node)  # ~Line 9
-
-        if node == target:
-            return path
-
-        for child in G[node]:  # Line 8
-            if child in visited:
+        node = queue.popleft()
+        visited.add(node)
+        for out in G[node]:
+            if out in visited:
                 continue
-            new_path = list(path)
-            new_path.append(child)
-            queue.append(child)
-            path_queue.append(new_path)
-
-    raise nx.NetworkXNoPath()
+            H.add_edge(out, node)
+            queue.append(out)
+    #H = nx.DiGraph.reverse(nx.bfs_tree(G, source))  # O(n+m)
+    path = []
+    node = target
+    try:
+        while node != source:  # O(n)
+            path.append(node)
+            for out in H.adj[node]:
+                node = out
+                break
+    except KeyError:
+        raise nx.NetworkXNoPath()
+    path.append(source)
+    return list(reversed(path))  # O(n)
 
 
 def ford_fulkerson(G,
@@ -244,33 +249,31 @@ def ford_fulkerson(G,
     return flow
 
 
-def benchmark(_max=100000, step=250, inner=25, **kwargs):
-    for n in range(10, _max, step):
-        for _ in range(inner):
-            G = generate_random_flow_network(n, m=choice([2, 3, 4, 5]))
-            start = timer()
-            f = ford_fulkerson(G, 'source', 'target', **kwargs)
-            end = timer()
-            f_ref = nx.maximum_flow_value(G, 'source', 'target')
-            if f != f_ref:
-                raise ValueError(
-                    f"Calculated flow: {f} does not match {f_ref}")
-            print(
-                f"{G.number_of_nodes()},{G.number_of_edges()},{f},{end-start}")
+def benchmark(fname, _max=100000, step=1000, inner=25, **kwargs):
+    with open(fname, 'w+') as fh:
+        for n in range(10, _max, step):
+            sys.stdout.flush()
+            fh.flush()
+            os.fsync(fh)
+            for _ in range(inner):
+                G = generate_random_flow_network(n, m=choice([2, 3, 4, 5]))
+                start = timer()
+                f = ford_fulkerson(G, 'source', 'target', **kwargs)
+                end = timer()
+                f_ref = nx.maximum_flow_value(G, 'source', 'target')
+                if f != f_ref:
+                    raise ValueError(
+                        f"Calculated flow: {f} does not match {f_ref}")
+                print(
+                    f"{G.number_of_nodes()},{G.number_of_edges()},{f},{end-start}"
+                )
+                fh.write(
+                    f"{G.number_of_nodes()},{G.number_of_edges()},{f},{end-start}\n"
+                )
 
 
 if __name__ == "__main__":
-    # G = generate_random_flow_network(10, m=3)
-    # #visualize_flow(G)
-    # Gf, f = ford_fulkerson(G,
-    #                        'source',
-    #                        'target',
-    #                        path_find=nx.dijkstra_path,
-    #                        flowkey='weight')
-    # f_ref = nx.maximum_flow_value(G, 'source', 'target')
-    # print(f, f_ref)
-    # #visualize_flow(Gf)
-    print("DIJKSTRA")
-    benchmark(path_find=nx.dijkstra_path)
-    print("BFS")
-    benchmark()
+    if sys.argv[1] == "bfs":
+        benchmark("bfs.csv")
+    else:
+        benchmark("dijkstra.csv", path_find=nx.dijkstra_path)
