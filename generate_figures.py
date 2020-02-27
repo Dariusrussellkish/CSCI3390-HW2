@@ -37,8 +37,8 @@ if __name__ == "__main__":
     # plt.hist(maxf)
     # plt.show()
     plt.show()
-    plt.title(f"{name} O(nm^2)")
-    x = numv * nume * nume
+    plt.title(f"{name} O(mf)")
+    x = nume * maxf
     gradient, intercept, r_value, p_value, std_err = stats.linregress(x, time)
     mn = np.min(x)
     mx = np.max(x)
